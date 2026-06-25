@@ -1,13 +1,9 @@
 "use client"
 
-import { Clock } from "lucide-react"
+import { Clock, QrCode, Search } from "lucide-react"
 import { CashAvatar } from "./cash-avatar"
 import { Keypad } from "./keypad"
 import type { CashProfile } from "@/hooks/use-cash-store"
-
-function formatBalance(n: number) {
-  return n.toLocaleString("en-US", { style: "currency", currency: "USD" })
-}
 
 export function HomeScreen({
   profile,
@@ -27,61 +23,83 @@ export function HomeScreen({
   onOpenActivity: () => void
 }) {
   const display = amount === "" ? "0" : amount
-  const canPay = Number(amount) > 0
 
   return (
-    <div className="flex h-full flex-col px-5 pb-5 pt-4">
+    <div className="flex h-full flex-col bg-cash-green px-5 pb-3 pt-4 text-cash-ink">
       <header className="flex items-center justify-between">
-        <button type="button" onClick={onOpenSettings} aria-label="Open profile settings">
-          <CashAvatar avatar={profile.avatar} username={profile.username} className="h-10 w-10 text-base" />
+        <button
+          type="button"
+          aria-label="Scan QR code"
+          className="flex h-10 w-10 items-center justify-center rounded-full active:bg-black/10"
+        >
+          <QrCode className="h-7 w-7" aria-hidden="true" />
+        </button>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onPay}
+            aria-label="Search"
+            className="flex h-10 w-10 items-center justify-center rounded-full active:bg-black/10"
+          >
+            <Search className="h-6 w-6" aria-hidden="true" />
+          </button>
+          <button type="button" onClick={onOpenSettings} aria-label="Open profile settings">
+            <CashAvatar avatar={profile.avatar} username={profile.username} className="h-10 w-10 text-base" />
+          </button>
+        </div>
+      </header>
+
+      <div className="flex flex-1 flex-col items-center justify-center">
+        <span className="text-8xl font-bold tabular-nums tracking-tight">${display}</span>
+      </div>
+
+      <Keypad onPress={onKey} tone="onGreen" />
+
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={onRequest}
+          className="h-14 rounded-full bg-black/10 text-lg font-semibold text-cash-ink active:bg-black/15"
+        >
+          Pool
+        </button>
+        <button
+          type="button"
+          onClick={onRequest}
+          className="h-14 rounded-full bg-black/10 text-lg font-semibold text-cash-ink active:bg-black/15"
+        >
+          Request
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={onPay}
+        className="mt-3 h-14 rounded-full bg-foreground text-lg font-semibold text-background active:opacity-90"
+      >
+        Pay
+      </button>
+
+      <nav className="mt-2 flex items-center justify-between px-6 pt-2" aria-label="Primary">
+        <button type="button" className="text-xl font-bold text-cash-ink-muted" aria-label="Money">
+          $5
+        </button>
+        <button type="button" className="text-2xl font-bold text-cash-ink" aria-label="Payments">
+          $
         </button>
         <button
           type="button"
           onClick={onOpenActivity}
-          aria-label="Activity"
-          className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-colors active:bg-muted"
+          aria-label="Activity, 5 new"
+          className="relative text-cash-ink-muted"
         >
-          <Clock className="h-6 w-6" aria-hidden="true" />
+          <Clock className="h-7 w-7" aria-hidden="true" />
+          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[11px] font-bold text-cash-green-foreground">
+            5
+          </span>
         </button>
-      </header>
-
-      <div className="mt-2 text-center">
-        <button
-          type="button"
-          onClick={onOpenSettings}
-          className="rounded-full bg-muted px-3 py-1 text-sm font-medium text-muted-foreground"
-        >
-          {formatBalance(profile.balance)} available
-        </button>
-      </div>
-
-      <div className="flex flex-1 flex-col items-center justify-center">
-        <div className="flex items-start text-foreground">
-          <span className="mt-3 text-4xl font-semibold tabular-nums">$</span>
-          <span className="text-7xl font-semibold tabular-nums">{display}</span>
-        </div>
-      </div>
-
-      <Keypad onPress={onKey} />
-
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={onRequest}
-          disabled={!canPay}
-          className="h-14 rounded-full bg-muted text-lg font-semibold text-foreground transition-opacity disabled:opacity-40"
-        >
-          Request
-        </button>
-        <button
-          type="button"
-          onClick={onPay}
-          disabled={!canPay}
-          className="h-14 rounded-full bg-cash-green text-lg font-semibold text-cash-green-foreground transition-opacity disabled:opacity-40"
-        >
-          Pay
-        </button>
-      </div>
+      </nav>
     </div>
   )
 }

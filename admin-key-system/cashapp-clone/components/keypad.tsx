@@ -24,7 +24,7 @@ export function Keypad({
           className={cn(
             "flex h-16 items-center justify-center rounded-2xl text-3xl font-medium transition-colors",
             onGreen
-              ? "text-cash-green-foreground active:bg-black/10"
+              ? "text-cash-ink active:bg-black/10"
               : "text-foreground active:bg-muted",
           )}
         >

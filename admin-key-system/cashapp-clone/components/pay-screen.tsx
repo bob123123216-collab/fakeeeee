@@ -1,10 +1,47 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowLeft, Search } from "lucide-react"
+import { ArrowLeft, BadgeCheck, Loader2, Search } from "lucide-react"
+import { useCashProfileLookup, type LookedUpProfile } from "@/hooks/use-cash-profile-lookup"
 
 function formatMoney(n: number) {
   return n.toLocaleString("en-US", { style: "currency", currency: "USD" })
+}
+
+function ProfileAvatar({
+  profile,
+  fallbackInitial,
+  className = "h-11 w-11 text-base",
+}: {
+  profile: LookedUpProfile | null
+  fallbackInitial: string
+  className?: string
+}) {
+  const initial = (profile?.initial || fallbackInitial || "?").toUpperCase()
+  const accent = profile?.accentColor || undefined
+
+  if (profile?.avatarUrl) {
+    return (
+      <div className={`overflow-hidden rounded-full ${className}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={profile.avatarUrl || "/placeholder.svg"}
+          alt=""
+          crossOrigin="anonymous"
+          className="h-full w-full object-cover"
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={`flex items-center justify-center rounded-full font-semibold text-black/80 ${className}`}
+      style={{ backgroundColor: accent ?? "#00C244" }}
+    >
+      {initial}
+    </div>
+  )
 }
 
 export function PayScreen({
@@ -19,13 +56,17 @@ export function PayScreen({
   onConfirm: (username: string, note: string) => void
 }) {
   const [query, setQuery] = useState("")
-  const [recipient, setRecipient] = useState<string | null>(null)
+  const [recipient, setRecipient] = useState<{ username: string; profile: LookedUpProfile | null } | null>(null)
   const [note, setNote] = useState("")
 
   const cleaned = query.trim().replace(/^\$/, "")
   const insufficient = amount > balance
+  const { profile, loading } = useCashProfileLookup(query)
 
   if (recipient) {
+    const rp = recipient.profile
+    const displayName = rp?.displayName || `$${recipient.username}`
+    const cashtag = rp?.cashtag || `$${recipient.username}`
     return (
       <div className="flex h-full flex-col px-5 pb-6 pt-4">
         <header className="flex items-center">
@@ -40,8 +81,12 @@ export function PayScreen({
         </header>
 
         <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <p className="text-sm text-muted-foreground">Paying</p>
-          <p className="mt-1 text-xl font-semibold text-foreground">${recipient}</p>
+          <ProfileAvatar profile={rp} fallbackInitial={recipient.username.charAt(0)} className="h-20 w-20 text-2xl" />
+          <p className="mt-4 flex items-center gap-1 text-xl font-semibold text-foreground">
+            {displayName}
+            {rp?.isVerified && <BadgeCheck className="h-5 w-5 text-cash-green" aria-label="Verified" />}
+          </p>
+          <p className="text-sm text-muted-foreground">{cashtag}</p>
           <p className="mt-6 text-6xl font-semibold tabular-nums text-foreground">{formatMoney(amount)}</p>
           {insufficient && (
             <p className="mt-4 text-sm font-medium text-destructive">Not enough balance for this payment</p>
@@ -58,7 +103,7 @@ export function PayScreen({
         <button
           type="button"
           disabled={insufficient}
-          onClick={() => onConfirm(recipient, note)}
+          onClick={() => onConfirm(recipient.username, note)}
           className="h-14 rounded-full bg-cash-green text-lg font-semibold text-cash-green-foreground transition-opacity disabled:opacity-40"
         >
           Pay {formatMoney(amount)}
@@ -66,6 +111,9 @@ export function PayScreen({
       </div>
     )
   }
+
+  const showRow = cleaned.length > 0
+  const matched = profile?.found ? profile : null
 
   return (
     <div className="flex h-full flex-col px-5 pb-6 pt-4">
@@ -93,20 +141,38 @@ export function PayScreen({
       </div>
 
       <div className="mt-4 flex-1 overflow-y-auto">
-        {cleaned.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setRecipient(cleaned)}
-            className="flex w-full items-center gap-3 rounded-2xl px-2 py-3 text-left active:bg-muted"
-          >
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-cash-green text-cash-green-foreground font-semibold">
-              {cleaned.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">${cleaned}</p>
-              <p className="text-sm text-muted-foreground">Send {formatMoney(amount)}</p>
-            </div>
-          </button>
+        {showRow && (
+          <>
+            {loading && (
+              <div className="flex items-center gap-3 px-2 py-3 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                <span className="text-sm">Searching Cash App…</span>
+              </div>
+            )}
+
+            {!loading && (
+              <button
+                type="button"
+                onClick={() => setRecipient({ username: cleaned, profile: matched })}
+                className="flex w-full items-center gap-3 rounded-2xl px-2 py-3 text-left active:bg-muted"
+              >
+                <ProfileAvatar profile={matched} fallbackInitial={cleaned.charAt(0)} />
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1 font-semibold text-foreground">
+                    <span className="truncate">{matched?.displayName || `$${cleaned}`}</span>
+                    {matched?.isVerified && (
+                      <BadgeCheck className="h-4 w-4 shrink-0 text-cash-green" aria-label="Verified" />
+                    )}
+                  </p>
+                  <p className="truncate text-sm text-muted-foreground">
+                    {matched
+                      ? `${matched.cashtag} · Send ${formatMoney(amount)}`
+                      : `No Cash App account found · Send ${formatMoney(amount)}`}
+                  </p>
+                </div>
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>
